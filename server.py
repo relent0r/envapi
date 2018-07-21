@@ -4,7 +4,10 @@ import pyodbc
 import configparser
 from json import dumps
 from flask_jsonpify import jsonify
+from startup import get_ip
 
+#Get primary IP for web server binding
+ip_address = get_ip()
 sqlconfig = configparser.ConfigParser()
 sqlconfig.read('config.ini')
 app = Flask(__name__)
@@ -30,5 +33,5 @@ api.add_resource(Servers_Name, '/servers/<client_id>') # Route_3
 
 
 if __name__ == '__main__':
-     app.run(host='10.1.1.101', port='5002')
+     app.run(host=ip_address, port='5002')
      
