@@ -37,20 +37,27 @@ class UserQuery(Resource):
 class UserAPI(Resource):    
     def post(self):
         import datetime
+        from bcrypt import hashpw, gensalt
+        # request into json variable
         jsoncontent = request.get_json()
+        # start extracting properties
         username = jsoncontent['username']
         password = jsoncontent['password']
+        # hash the password
+        passhash = hashpw(password.encode('utf-8'), gensalt(14))
         firstname = jsoncontent['firstname']
         lastname = jsoncontent['lastname']
         emailaddress = jsoncontent['email']
+        # get datetime for created column
         i = datetime.datetime.now()
         datecreated = i.isoformat()
+        #check if null values, this doesn't really work with json input tbh
         if username is None or password is None or firstname is None or lastname is None or emailaddress is None:
             abort(400) # invalid parameters
         cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s' % (sqlconfig['SQLConfig']['server'], sqlconfig['SQLConfig']['identitydb'], sqlconfig['SQLConfig']['username'], sqlconfig['SQLConfig']['password']))
         cursor = cnxn.cursor()   
-        cursor.execute("""INSERT INTO dbo.users (username, firstname, lastname, emailaddress, password, created) VALUES (?, ?, ?, ?, ?, ?)""", username, firstname, lastname, emailaddress, password, datecreated)
-        cursor.commit()
+        cursor.execute("""INSERT INTO dbo.users (username, firstname, lastname, emailaddress, password, created) VALUES (?, ?, ?, ?, ?, ?)""", username, firstname, lastname, emailaddress, passhash, datecreated)
+        cursor.commit() # don't forget to commit your change
         return ('User ' + username + ' Added')
 
 api.add_resource(Servers, '/servers') # Route_1
