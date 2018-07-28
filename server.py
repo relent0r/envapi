@@ -5,65 +5,22 @@ import configparser
 from json import dumps
 from flask_jsonpify import jsonify
 from startup import get_ip
+import IdentityManager
+import ServerManager
 
 #Get primary IP for web server binding
 ip_address = get_ip()
-sqlconfig = configparser.ConfigParser()
-sqlconfig.read('config.ini')
+
 app = Flask(__name__)
 api = Api(app)
 
-class Servers(Resource):
-    def get(self):
-        cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s' % (sqlconfig['SQLConfig']['server'], sqlconfig['SQLConfig']['database'], sqlconfig['SQLConfig']['username'], sqlconfig['SQLConfig']['password']))
-        cursor = cnxn.cursor()
-        query = cursor.execute("""SELECT name, cpu, memory FROM dbo.servers""")
-        return {'servers': [i[0] for i in query.fetchall()]}
 
-class Servers_Name(Resource):
-    def get(self, client_id):
-        cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s' % (sqlconfig['SQLConfig']['server'], sqlconfig['SQLConfig']['database'], sqlconfig['SQLConfig']['username'], sqlconfig['SQLConfig']['password']))
-        cursor = cnxn.cursor()
-        query = cursor.execute("""SELECT name, cpu, memory FROM dbo.servers WHERE clientid = ?""", client_id)
-        return {'servers': [dict(zip([column[0] for column in cursor.description], row)) for row in query.fetchall()]}
 
-class UserQuery(Resource):
-    def get(self, username):
-        cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s' % (sqlconfig['SQLConfig']['server'], sqlconfig['SQLConfig']['identitydb'], sqlconfig['SQLConfig']['username'], sqlconfig['SQLConfig']['password']))
-        cursor = cnxn.cursor()
-        query = cursor.execute("""SELECT username, firstname, lastname, emailaddress FROM dbo.users WHERE username = ?""", username)
-        return {'userdetails': [dict(zip([column[0] for column in cursor.description], row)) for row in query.fetchall()]}    
-
-class UserAPI(Resource):    
-    def post(self):
-        import datetime
-        from bcrypt import hashpw, gensalt
-        # request into json variable
-        jsoncontent = request.get_json()
-        # start extracting properties
-        username = jsoncontent['username']
-        password = jsoncontent['password']
-        # hash the password
-        passhash = hashpw(password.encode('utf-8'), gensalt(14))
-        firstname = jsoncontent['firstname']
-        lastname = jsoncontent['lastname']
-        emailaddress = jsoncontent['email']
-        # get datetime for created column
-        i = datetime.datetime.now()
-        datecreated = i.isoformat()
-        #check if null values, this doesn't really work with json input tbh
-        if username is None or password is None or firstname is None or lastname is None or emailaddress is None:
-            abort(400) # invalid parameters
-        cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s' % (sqlconfig['SQLConfig']['server'], sqlconfig['SQLConfig']['identitydb'], sqlconfig['SQLConfig']['username'], sqlconfig['SQLConfig']['password']))
-        cursor = cnxn.cursor()   
-        cursor.execute("""INSERT INTO dbo.users (username, firstname, lastname, emailaddress, password, created) VALUES (?, ?, ?, ?, ?, ?)""", username, firstname, lastname, emailaddress, passhash, datecreated)
-        cursor.commit() # don't forget to commit your change
-        return ('User ' + username + ' Added')
-
-api.add_resource(Servers, '/servers') # Route_1
-api.add_resource(Servers_Name, '/servers/<client_id>') # Route_3
-api.add_resource(UserQuery, '/users/<username>') # Route_2
-api.add_resource(UserAPI, '/users') # Route_2
+#api.app_resource(login, '/login')
+api.add_resource(ServerManager.Servers, '/servers') # Route_1
+api.add_resource(ServerManager.Servers_Name, '/servers/<client_id>') # Route_3
+api.add_resource(IdentityManager.UserQuery, '/users/<username>') # Route_2
+api.add_resource(IdentityManager.UserAPI, '/users') # Route_2
 
 
 if __name__ == '__main__':
