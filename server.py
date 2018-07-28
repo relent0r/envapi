@@ -16,11 +16,12 @@ api = Api(app)
 
 
 
-#api.app_resource(login, '/login')
+api.add_resource(IdentityManager.Login, '/login')
 api.add_resource(ServerManager.Servers, '/servers') # Route_1
 api.add_resource(ServerManager.Servers_Name, '/servers/<client_id>') # Route_3
 api.add_resource(IdentityManager.UserQuery, '/users/<username>') # Route_2
 api.add_resource(IdentityManager.UserAPI, '/users') # Route_2
+
 
 
 if __name__ == '__main__':
